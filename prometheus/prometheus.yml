@@ -1,0 +1,30 @@
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+alerting:
+  alertmanagers:
+  - static_configs:
+    - targets: []
+    scheme: http
+    timeout: 10s
+    api_version: v1
+scrape_configs: 
+- job_name: kube-state-metrics
+  honor_timestamps: true
+  scrape_interval: 5s
+  scrape_timeout: 5s
+  scheme: http
+  static_configs:
+  - targets:
+    - host.docker.internal:8082
+  metrics_path: /metrics
+- job_name: kube-state-metrics-telemetry
+  honor_timestamps: true
+  scrape_interval: 5s
+  scrape_timeout: 5s
+  scheme: http
+  static_configs:
+  - targets:
+    - host.docker.internal:8081
+  metrics_path: /metrics
