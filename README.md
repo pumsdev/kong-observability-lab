@@ -89,7 +89,15 @@ recheck on browser
 wrk -t1 -c1 -d180s http://localhost:8000/bin/headers
 ```
 
-### 
+## clean services
+```ssh
+# clean compose
+docker compose -f kong-traditional/docker-compose.yaml down
+docker compose -f observability-tools/docker-compose.yaml down
+
+# prune volume
+docker volume prune
+```
 
 # REF: เพิ่มเติม
 
