@@ -1,5 +1,7 @@
 # Kong Observability Labs
 
+![alt KongObservability](/images/Kong-observability.png)
+
 ## Observability Pillar
 
 1. Metrics ตัวเลข + เวลา เอาไปทำ graph
