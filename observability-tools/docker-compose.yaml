@@ -109,7 +109,6 @@ services:
     networks:
       - kong-lab-net
 
-
   fluent-bit:
     image: fluent/fluent-bit:latest
     container_name: fluent-bit

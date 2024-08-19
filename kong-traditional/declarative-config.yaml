@@ -1,17 +1,45 @@
 _format_version: "3.0"
 plugins:
   - name: opentelemetry
+    enabled: true
     config:
       endpoint: "http://jaeger-collector:4318/v1/traces"
       resource_attributes: 
         service.name: "kong.dev"
   - name: prometheus
+    enabled: true
     config:
       bandwidth_metrics: true
       latency_metrics: true
       per_consumer: false
       status_code_metrics: true
       upstream_health_metrics: true
+  - name: http-log
+    enabled: true
+    config:
+      content_type: application/json
+      custom_fields_by_lua: {}
+      flush_timeout: null
+      headers: {}
+      http_endpoint: http://fluent-bit:8888/app.log
+      keepalive: 60000
+      method: POST
+      queue:
+        initial_retry_delay: 0.01
+        max_batch_size: 1
+        max_bytes: null
+        max_coalescing_delay: 1
+        max_entries: 10000
+        max_retry_delay: 60
+        max_retry_time: 60
+      queue_size: null
+      retry_count: null
+      timeout: 10000
+    protocols:
+    - grpc
+    - grpcs
+    - http
+    - https
 
 services:
   - name: httpbin-service
