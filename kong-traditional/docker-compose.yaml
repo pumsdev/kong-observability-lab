@@ -1,0 +1,82 @@
+version: '3.5'
+services:
+  kong-database:
+    image: postgres:14
+    container_name: kong-database
+    restart: always
+    environment:
+      POSTGRES_DB: kong
+      POSTGRES_USER: kong
+      POSTGRES_PASSWORD: kongPass
+    networks:
+      - kong-lab-net
+    ports:
+      - 5432:5432
+  kong-migrations:
+    image: kong/kong-gateway:3.5
+    container_name: kong-migrations
+    command: kong migrations bootstrap
+    restart: on-failure
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-database
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kongPass
+    networks:
+      - kong-lab-net
+  kong:
+    image: kong/kong-gateway:3.5
+    container_name: kong
+    restart: always
+    depends_on:
+      - kong-database
+      - kong-migrations
+    environment:
+      KONG_ADMIN_ACCESS_LOG: /tmp/admin_access.log
+      KONG_ADMIN_ERROR_LOG: /tmp/admin_err.log
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001, 0.0.0.0:8444 ssl
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_PROXY_LISTEN: 0.0.0.0:8000
+      KONG_PROXY_LISTEN_SSL: 0.0.0.0:8443
+      KONG_STATUS_LISTEN: 0.0.0.0:8100
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-database
+      KONG_PG_PORT: 5432
+      KONG_PG_DATABASE: kong
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kongPass
+      KONG_ADMIN_GUI_PATH: /manager
+      KONG_ADMIN_GUI_URL: http://localhost:8002/manager
+      KONG_LOG_LEVEL: debug
+      KONG_TRACING_INSTRUMENTATIONS: all
+      KONG_TRACING_SAMPLING_RATE: 1.0
+      # LUA_PATH: /kong-plugin-template/?.lua
+      # KONG_DECLARATIVE_CONFIG: /declarative/kong.yml
+    # volumes:
+    #   - ./kong.yaml:/declarative/kong.yaml
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+      - "8002:8002"
+      - "8443:8443"
+      - "8444:8444"
+      - "8100:8100"
+    networks:
+      - kong-lab-net
+
+## SIMPLE APP ##
+  httpbin:
+    container_name: httpbin
+    image: kong/httpbin:0.1.0
+    depends_on:
+      - kong
+    networks:
+      - kong-lab-net
+    ports:
+      - 80
+
+networks:
+  kong-lab-net:
+    external: false
+    name: kong-lab-net

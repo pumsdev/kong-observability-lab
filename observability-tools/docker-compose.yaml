@@ -1,0 +1,143 @@
+version: '3.5'
+services:
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yaml'
+    ports:
+      - 9090:9090
+    restart: unless-stopped
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prom_data:/prometheus
+    networks:
+      - kong-lab-net
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - 3000:3000
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=grafana
+    volumes:
+      - ./grafana:/etc/grafana/provisioning/datasources
+    networks:
+      - kong-lab-net
+
+  opensearch:
+    image: opensearchproject/opensearch:latest # This should be the same image used for opensearch-node1 to avoid issues
+    container_name: opensearch
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    ports:
+      - 9200:9200
+      - 9600:9600
+    volumes:
+      - opensearch_data:/usr/share/opensearch/data
+    environment:
+      - discovery.type=single-node
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=Opensearch@1
+    networks:
+      - kong-lab-net
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:latest # Make sure the version of opensearch-dashboards matches the version of opensearch installed on other nodes
+    container_name: opensearch-dashboards
+    ports:
+      - 5601:5601 # Map host port 5601 to container port 5601
+    expose:
+      - "5601" # Expose port 5601 for web access to OpenSearch Dashboards
+    depends_on:
+      - opensearch
+    environment:
+      OPENSEARCH_HOSTS: '["https://opensearch:9200"]' # Define the OpenSearch nodes that OpenSearch Dashboards will query
+    networks:
+      - kong-lab-net
+  
+  jaeger-collector:
+    image: jaegertracing/jaeger-collector:1.60
+    container_name: jaeger-collector
+    restart: on-failure
+    ports:
+      - 4317:4317
+      - 4318:4318
+    depends_on:
+      - opensearch
+    environment: 
+      - SPAN_STORAGE_TYPE=opensearch
+      - ES_TAGS_AS_FIELD_ALL=true
+      - ES_USERNAME=admin
+      - ES_PASSWORD=Opensearch@1
+      - COLLECTOR_OTLP_ENABLED=true
+      - ES_TLS_SKIP_HOST_VERIFY=true
+    command: [
+      "--es.server-urls=https://opensearch:9200",
+      "--es.tls.enabled=true",
+    ]
+    networks:
+      - kong-lab-net
+  jaeger-ui:
+    image: jaegertracing/jaeger-query:1.60
+    container_name: jaeger-ui
+    restart: always
+    
+    ports:
+      - 16686:16686 #jeager ui port
+      # - 14269:14269 #admin port health check
+    depends_on:
+      - opensearch
+    environment:
+      - SPAN_STORAGE_TYPE=opensearch
+      - ES_SERVER_URLS=https://opensearch:9200
+      - ES_USERNAME=admin
+      - ES_PASSWORD=Opensearch@1
+      - ES_TLS_SKIP_HOST_VERIFY=true
+      - ES_TLS_ENABLED=true
+    networks:
+      - kong-lab-net
+
+
+  fluent-bit:
+    image: fluent/fluent-bit:latest
+    container_name: fluent-bit
+    # ports:
+    #   - 8888:8888
+    depends_on:
+      - opensearch
+    volumes:
+      - ./fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
+    networks:
+      - kong-lab-net
+    
+  
+  ## Optional
+  # otel-collector:
+  #   image: otel/opentelemetry-collector-contrib:0.52.0
+  #   container_name: opentelemetry-collector
+  #   command:
+  #     - '--config=/etc/otel-collector-config.yaml'
+  #   ports:
+  #     - 4317:4317
+  #     - 4318:4318
+  #     - 55679:55679
+  #   volumes:
+  #     - ./opentelemetry/otelcol.yaml:/etc/otel-collector-config.yaml
+
+volumes:
+  prom_data:
+  opensearch_data:
+
+networks:
+  kong-lab-net:
+    external: true
