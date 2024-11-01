@@ -68,7 +68,7 @@ services:
       - kong-lab-net
   
   jaeger-collector:
-    image: jaegertracing/jaeger-collector:1.60
+    image: jaegertracing/jaeger-collector:latest
     container_name: jaeger-collector
     restart: on-failure
     ports:
@@ -90,7 +90,7 @@ services:
     networks:
       - kong-lab-net
   jaeger-ui:
-    image: jaegertracing/jaeger-query:1.60
+    image: jaegertracing/jaeger-query:latest
     container_name: jaeger-ui
     restart: always
     
